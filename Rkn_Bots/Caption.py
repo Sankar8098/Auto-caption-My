@@ -69,7 +69,7 @@ async def start_cmd(bot, message):
     ]]))
     
     # Send a random emoji reaction
-    await send_reaction(message.chat.id, message.message_id)
+    await send_reaction(message.chat.id, message.id)
 
 @Client.on_message(filters.command("set_caption") & filters.channel)
 async def setCap(bot, message):
