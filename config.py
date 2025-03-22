@@ -25,7 +25,7 @@ class Rkn_Bots(object):
     # caption
     DEF_CAP = os.environ.get(
         "DEF_CAP",
-        "<b><a href='telegram.me/VillageTv'>{file_caption}</a></b>"
+        "<b><a href='telegram.me/SK_MoviesOffl'>{file_caption}</a></b>"
     )
 
     # sticker Id
