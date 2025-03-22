@@ -96,10 +96,10 @@ async def start_cmd(bot, message):
 
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
+    chnl_id = message.chat.id
     if not message.caption:
         return
 
-    chnl_id = message.chat.id
     for file_type in ("video", "audio", "document", "voice"):
         obj = getattr(message, file_type, None)
         if obj and hasattr(obj, "file_name"):
@@ -108,8 +108,8 @@ async def auto_edit_caption(bot, message):
             # Remove usernames (e.g., @ChannelName)
             file_name = re.sub(r"@\w+\s*", "", file_name)
 
-            # Remove file extension (.mkv, .mp4, etc.)
-            file_name = file_name.rsplit(".", 1)[0]
+            # Remove file extension (e.g., .mkv, .mp4, .avi)
+            file_name = re.sub(r"\.\w{2,4}$", "", file_name)
 
             # Replace remaining dots with spaces
             file_name = file_name.replace(".", " ")
@@ -117,16 +117,22 @@ async def auto_edit_caption(bot, message):
             file_caption = message.caption or ""
             cap_dets = await chnl_ids.find_one({"chnl_id": chnl_id})
 
-            try:
-                if cap_dets:
-                    new_caption = cap_dets["caption"].format(file_name=file_name, file_caption=file_caption)
-                else:
-                    new_caption = Rkn_Bots.DEF_CAP.format(file_name=file_name, file_caption=file_caption)
+            if cap_dets:
+                new_caption = cap_dets["caption"].format(file_name=file_name, file_caption=file_caption)
+            else:
+                new_caption = Rkn_Bots.DEF_CAP.format(file_name=file_name, file_caption=file_caption)
 
-                await message.edit(new_caption)
+            # 🔥 Fix "MESSAGE_NOT_MODIFIED" error by skipping if unchanged
+            if new_caption.strip() == file_caption.strip():
+                print("Caption unchanged, skipping edit.")
+                return
+
+            try:
+                await message.edit_caption(new_caption)
+                print("✅ Caption updated successfully!")
             except FloodWait as e:
+                print(f"⏳ FloodWait detected! Waiting {e.x} seconds...")
                 await asyncio.sleep(e.x)
-                await message.edit(new_caption)
-            except Exception as e:
-                print(f"Error editing caption: {e}")
-    
+                await message.edit_caption(new_caption)
+            except errors.RPCError as e:
+                print(f"❌ Telegram Error: {e}")
