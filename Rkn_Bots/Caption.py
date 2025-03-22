@@ -47,39 +47,6 @@ async def start_cmd(bot, message):
     await send_reaction(message.chat.id, message.id)
 
 # Set Caption
-@Client.on_message(filters.command("set_caption") & filters.channel)
-async def setCap(bot, message):
-    if len(message.command) < 2:
-        return await message.reply("Usage: /set_caption <code>Your caption</code>\n"
-                                   "Use {file_name} to show the file name and {file_caption} for the original caption.")
-    
-    chnl_id = message.chat.id
-    caption = message.text.split(" ", 1)[1]  
-
-    # Check if channel already has a custom caption
-    chkData = await chnl_ids.find_one({"chnl_id": chnl_id})
-    
-    if chkData:
-        await updateCap(chnl_id, caption)
-        return await message.reply(f"✅ Your new caption has been updated: {caption}")
-    else:
-        await addCap(chnl_id, caption)
-        return await message.reply(f"✅ Caption set successfully: {caption}")
-
-# Delete Caption
-@Client.on_message(filters.command(["delcaption", "del_caption", "delete_caption"]) & filters.channel)
-async def delCap(bot, msg):
-    chnl_id = msg.chat.id
-    try:
-        await chnl_ids.delete_one({"chnl_id": chnl_id})
-        return await msg.reply("<b>✅ Success! Default caption will be used from now.</b>")
-    except Exception as e:
-        e_val = await msg.reply(f"❌ Error: {e}")
-        await asyncio.sleep(5)
-        await e_val.delete()
-        return
-
-# Auto Edit Caption
 @Client.on_message(filters.channel)
 async def auto_edit_caption(bot, message):
     chnl_id = message.chat.id
@@ -100,23 +67,24 @@ async def auto_edit_caption(bot, message):
             # Replace remaining dots with spaces
             file_name = file_name.replace(".", " ")
 
-            # Get existing caption
+            # Get existing caption (assumed to contain the Fast Download Link)
             file_caption = message.caption or ""
 
-            # Clean file_caption (remove dots and .mkv)
-            cleaned_caption = re.sub(r"\.\w{2,4}$", "", file_caption).replace(".", " ")
+            # Extract only the **download link** from the caption (if available)
+            link_match = re.search(r'https?://\S+', file_caption)
+            download_link = link_match.group(0) if link_match else ""
 
-            # Ensure the file caption is clickable inside the hyperlink
-            formatted_caption = f"<b><a href='https://telegram.me/SK_MoviesOffl'>{cleaned_caption}</a></b>"
+            # **Final Caption Format**
+            formatted_caption = f"{file_name}\n\n➠ Fast Download Link : {download_link}"
 
-            # Fetch custom caption from DB
+            # Fetch custom caption from DB (if set)
             cap_dets = await chnl_ids.find_one({"chnl_id": chnl_id})
 
-            # Use custom caption if set, otherwise use the default formatted caption
+            # Use custom caption if available, otherwise use default format
             if cap_dets:
                 new_caption = cap_dets["caption"].format(file_name=file_name, file_caption=formatted_caption)
             else:
-                new_caption = DEF_CAP.format(file_name=file_name, file_caption=formatted_caption)
+                new_caption = formatted_caption
 
             # **Force Edit by Adding a Zero-Width Space (if needed)**
             if new_caption.strip() == file_caption.strip():
