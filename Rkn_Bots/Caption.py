@@ -54,10 +54,10 @@ async def auto_edit_caption(bot, message):
             file_name = re.sub(r"\.\w{2,4}$", "", file_name)  # Remove .mkv, .mp4, etc.
             file_name = file_name.replace(".", " ")  # Replace remaining dots with spaces
 
-            # ✅ Extract Download Link
+            # ✅ Extract and Clean Download Link
             file_caption = message.caption or ""
             link_match = re.search(r'https?://\S+', file_caption)
-            download_link = link_match.group(0) if link_match else ""
+            download_link = link_match.group(0).strip() if link_match else "No Link Available"
 
             # ✅ Fetch Custom Caption from DB
             cap_dets = await chnl_ids.find_one({"chnl_id": chnl_id})
@@ -67,6 +67,9 @@ async def auto_edit_caption(bot, message):
                 new_caption = cap_dets["caption"].format(file_name=file_name, file_caption=download_link)
             else:
                 new_caption = DEF_CAP.format(file_name=file_name, file_caption=download_link)
+
+            # ✅ Ensure No Broken Links
+            new_caption = re.sub(r"\s+", " ", new_caption).strip()  # Remove extra spaces
 
             # ✅ Prevent Telegram from Skipping Edits
             if new_caption.strip() == file_caption.strip():
@@ -80,7 +83,7 @@ async def auto_edit_caption(bot, message):
                 await message.edit_caption(new_caption)
             except Exception as e:
                 print(f"❌ Error editing caption: {e}")
-
+                
 # ✅ Get Total Users Count
 @Client.on_message(filters.private & filters.command("rknusers"))
 async def all_db_users_here(client, message):
