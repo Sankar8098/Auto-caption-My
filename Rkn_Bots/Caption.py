@@ -108,7 +108,7 @@ async def auto_edit_caption(bot, message):
             if obj and hasattr(obj, "file_name"):
                 file_name = obj.file_name
                 file_caption = message.caption or ""
-                file_name = re.sub(r"@\w+\s*", "", file_name).replace("_", " ").replace(".", " ").replace("@VillageTV", "@SK_HD_MOVIE")
+                file_name = re.sub(r"@\w+\s*", "", file_name).replace("_", " ").replace(".", " ").replace(".mkv", "")
                 cap_dets = await chnl_ids.find_one({"chnl_id": chnl_id})
                 try:
                     if cap_dets:
