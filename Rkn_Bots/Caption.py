@@ -50,14 +50,16 @@ async def auto_edit_caption(bot, message):
             file_name = obj.file_name or "Unknown"
 
             # ✅ Clean File Name (Remove . and Extensions)
-            file_name = re.sub(r"@\w+\s*", "", file_name)  # Remove @username
             file_name = re.sub(r"\.\w{2,4}$", "", file_name)  # Remove .mkv, .mp4, etc.
             file_name = file_name.replace(".", " ")  # Replace remaining dots with spaces
 
-            # ✅ Extract and Clean Download Link
+            # ✅ Extract Download Link and Ensure It’s on One Line
             file_caption = message.caption or ""
-            link_match = re.search(r'https?://\S+', file_caption)
-            download_link = link_match.group(0).strip() if link_match else "No Link Available"
+            link_match = re.search(r'https?://[^\s]+', file_caption)
+            download_link = link_match.group(0) if link_match else "No Link Available"
+
+            # ✅ Remove Newline Issues from the Link
+            download_link = download_link.replace("\n", "").strip()
 
             # ✅ Fetch Custom Caption from DB
             cap_dets = await chnl_ids.find_one({"chnl_id": chnl_id})
@@ -66,21 +68,17 @@ async def auto_edit_caption(bot, message):
             if cap_dets:
                 new_caption = cap_dets["caption"].format(file_name=file_name, file_caption=download_link)
             else:
-                new_caption = DEF_CAP.format(file_name=file_name, file_caption=download_link)
+                new_caption = f"{file_name}\n➠ Fast Download Link: {download_link}"
 
-            # ✅ Ensure No Broken Links
+            # ✅ Ensure Proper Formatting
             new_caption = re.sub(r"\s+", " ", new_caption).strip()  # Remove extra spaces
 
-            # ✅ Prevent Telegram from Skipping Edits
-            if new_caption.strip() == file_caption.strip():
-                new_caption += "​"  # Zero-Width Space
-
             try:
-                await message.edit_caption(new_caption)
+                await message.edit_caption(new_caption, parse_mode="html")
                 print(f"✅ Caption updated successfully: {new_caption}")
             except FloodWait as e:
                 await asyncio.sleep(e.x)
-                await message.edit_caption(new_caption)
+                await message.edit_caption(new_caption, parse_mode="html")
             except Exception as e:
                 print(f"❌ Error editing caption: {e}")
                 
