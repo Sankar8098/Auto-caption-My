@@ -102,17 +102,22 @@ async def auto_edit_caption(bot, message):
 
             # Get existing caption
             file_caption = message.caption or ""
+
+            # Ensure the file caption is clickable inside the hyperlink
+            formatted_caption = f"<b><a href='https://telegram.me/SK_MoviesOffl'>{file_caption}</a></b>"
+
+            # Fetch custom caption from DB
             cap_dets = await chnl_ids.find_one({"chnl_id": chnl_id})
 
-            # Use custom caption if set, otherwise use default
+            # Use custom caption if set, otherwise use the default formatted caption
             if cap_dets:
-                new_caption = cap_dets["caption"].format(file_name=file_name, file_caption=file_caption)
+                new_caption = cap_dets["caption"].format(file_name=file_name, file_caption=formatted_caption)
             else:
-                new_caption = DEF_CAP.format(file_name=file_name, file_caption=file_caption)
+                new_caption = DEF_CAP.format(file_name=file_name, file_caption=formatted_caption)
 
             # **Force Edit by Adding a Zero-Width Space (if needed)**
             if new_caption.strip() == file_caption.strip():
-                new_caption += "​"  # Unicode zero-width space
+                new_caption += ""  # Unicode zero-width space
 
             try:
                 await message.edit_caption(new_caption)
@@ -123,3 +128,4 @@ async def auto_edit_caption(bot, message):
                 await message.edit_caption(new_caption)
             except errors.RPCError as e:
                 print(f"❌ Telegram Error: {e}")
+                
