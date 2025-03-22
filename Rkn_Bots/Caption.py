@@ -104,67 +104,22 @@ async def auto_edit_caption(bot, message):
             file_caption = message.caption or ""
             cap_dets = await chnl_ids.find_one({"chnl_id": chnl_id})
 
+            # Use custom caption if set, otherwise use default
             if cap_dets:
                 new_caption = cap_dets["caption"].format(file_name=file_name, file_caption=file_caption)
             else:
                 new_caption = DEF_CAP.format(file_name=file_name, file_caption=file_caption)
 
-            # Skip editing if caption is unchanged
+            # **Force Edit by Adding a Zero-Width Space (if needed)**
             if new_caption.strip() == file_caption.strip():
-                print("⚠️ Caption unchanged, skipping edit.")
-                return
+                new_caption += "​"  # Unicode zero-width space
 
             try:
                 await message.edit_caption(new_caption)
-                print("✅ Caption updated successfully!")
+                print(f"✅ Caption updated successfully: {new_caption}")
             except errors.FloodWait as e:
                 print(f"⏳ FloodWait detected! Waiting {e.x} seconds...")
                 await asyncio.sleep(e.x)
                 await message.edit_caption(new_caption)
             except errors.RPCError as e:
                 print(f"❌ Telegram Error: {e}")
-
-# Broadcast Message to All Users
-@Client.on_message(filters.private & filters.user(Rkn_Bots.ADMIN) & filters.command(["broadcast"]))
-async def broadcast(bot, message):
-    if message.reply_to_message:
-        rkn = await message.reply_text("🔄 Fetching all users...")
-        all_users = await getid()
-        tot = await total_user()
-        success, failed, deactivated, blocked = 0, 0, 0, 0
-
-        async for user in all_users:
-            try:
-                time.sleep(1)
-                await message.reply_to_message.copy(user['_id'])
-                success += 1
-            except errors.InputUserDeactivated:
-                deactivated += 1
-                await delete({"_id": user['_id']})
-            except errors.UserIsBlocked:
-                blocked += 1
-                await delete({"_id": user['_id']})
-            except Exception as e:
-                failed += 1
-                await delete({"_id": user['_id']})
-                pass
-            try:
-                await rkn.edit(f"📢 **Broadcasting...**\n\n"
-                               f"👥 Total Users: {tot}\n"
-                               f"✅ Sent: {success}\n"
-                               f"🚫 Blocked: {blocked}\n"
-                               f"🗑 Deleted: {deactivated}\n"
-                               f"❌ Failed: {failed}")
-            except FloodWait as e:
-                await asyncio.sleep(e.x)
-
-        await rkn.edit("✅ **Broadcast Completed!**")
-
-# Restart Bot
-@Client.on_message(filters.private & filters.user(Rkn_Bots.ADMIN) & filters.command("restart"))
-async def restart_bot(bot, message):
-    msg = await bot.send_message(message.chat.id, "🔄 Restarting bot...")
-    await asyncio.sleep(3)
-    await msg.edit("✅ **Bot restarted successfully!**")
-    os.execl(sys.executable, sys.executable, *sys.argv)
-            
